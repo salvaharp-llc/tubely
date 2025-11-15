@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"os"
 
@@ -48,16 +49,13 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 	}
 	defer file.Close()
 
-	mediaType := header.Header.Get("Content-Type")
-
-	video, err := cfg.db.GetVideo(videoID)
+	mediaType, _, err := mime.ParseMediaType(header.Header.Get("Content-Type"))
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't find video", err)
+		respondWithError(w, http.StatusBadRequest, "Invalid Content-Type header", err)
 		return
 	}
-
-	if userID != video.UserID {
-		respondWithError(w, http.StatusUnauthorized, "Not the video owner", err)
+	if mediaType != "image/jpeg" && mediaType != "image/png" {
+		respondWithError(w, http.StatusBadRequest, "Invalid media type", nil)
 		return
 	}
 
@@ -73,6 +71,17 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 	_, err = io.Copy(dst, file)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't save file", err)
+		return
+	}
+
+	video, err := cfg.db.GetVideo(videoID)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't find video", err)
+		return
+	}
+
+	if userID != video.UserID {
+		respondWithError(w, http.StatusUnauthorized, "Not the video owner", err)
 		return
 	}
 
