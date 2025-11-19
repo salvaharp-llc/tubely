@@ -161,12 +161,13 @@ func getVideoAspectRatio(filePath string) (string, error) {
 		return "", errors.New("no video streams found")
 	}
 
-	switch metaData.Streams[0].Width / metaData.Streams[0].Height {
-	case 16 / 9:
+	w := metaData.Streams[0].Width
+	h := metaData.Streams[0].Height
+
+	if w*9 == h*16 {
 		return "16:9", nil
-	case 9 / 16:
+	} else if w*16 == h*9 {
 		return "9:16", nil
-	default:
-		return "other", nil
 	}
+	return "other", nil
 }
